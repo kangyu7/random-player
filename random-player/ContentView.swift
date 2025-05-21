@@ -11,20 +11,23 @@ import AppKit
 import UniformTypeIdentifiers
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var extensionItems: [ExtensionItem]
-
-    @State private var selectedExtension = "mp4"
-    @State private var customExtension = ""
+    
     let defaultExtensions = ["mp4", "avi"]
+    
+    @Environment(\.modelContext) private var modelContext
+    
+    @Query private var extensionItems: [ExtensionItem]
+    
+    @State private var customExtension = ""
     @State private var selectedDirectories: [URL] = []
     @State private var indexedFiles: [URL] = []
-    @AppStorage("selectedAppPath") private var selectedAppPath: String = ""
     @State private var selectedApp: URL? = nil
     @State private var lastExecutedFile: URL?
     @State private var showDeleteConfirmation = false
     @State private var isIndexing = false
     @State private var deleteStatus: (message: String, isSuccess: Bool)? = nil
+    
+    @AppStorage("selectedAppPath") private var selectedAppPath: String = ""
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -47,7 +50,7 @@ struct ContentView: View {
                         }
                 }
 
-                TextField("add Extension", text: $customExtension)
+                TextField("Add Extension", text: $customExtension)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 200)
                     .onSubmit {
@@ -57,7 +60,7 @@ struct ContentView: View {
                         customExtension = ""
                     }
                 
-                Button(isIndexing ? "Indexing..." : "Indexing") {
+                Button("Indexing") {
                     isIndexing = true
                     indexedFiles.removeAll()
                     DispatchQueue.global(qos: .userInitiated).async {
@@ -119,6 +122,12 @@ struct ContentView: View {
                 }
             }
             .padding(.bottom, 5)
+            
+            if isIndexing {
+                Text("Indexing...")
+                    .font(.caption)
+                    .foregroundColor(.blue)
+            }
             
             if let appURL = selectedApp {
                 Text("Selected App: \(appURL.lastPathComponent)")
