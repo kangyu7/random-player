@@ -24,7 +24,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		93CF4BF12DDD5DED00EBC4DA /* random-player.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "random-player.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		93CF4BF12DDD5DED00EBC4DA /* Random Player.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Random Player.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		93CF4C012DDD5DED00EBC4DA /* random-playerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "random-playerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		93CF4C0B2DDD5DED00EBC4DA /* random-playerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "random-playerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -98,7 +98,7 @@
 		93CF4BF22DDD5DED00EBC4DA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				93CF4BF12DDD5DED00EBC4DA /* random-player.app */,
+				93CF4BF12DDD5DED00EBC4DA /* Random Player.app */,
 				93CF4C012DDD5DED00EBC4DA /* random-playerTests.xctest */,
 				93CF4C0B2DDD5DED00EBC4DA /* random-playerUITests.xctest */,
 			);
@@ -127,7 +127,7 @@
 			packageProductDependencies = (
 			);
 			productName = "random-player";
-			productReference = 93CF4BF12DDD5DED00EBC4DA /* random-player.app */;
+			productReference = 93CF4BF12DDD5DED00EBC4DA /* Random Player.app */;
 			productType = "com.apple.product-type.application";
 		};
 		93CF4C002DDD5DED00EBC4DA /* random-playerTests */ = {
@@ -425,7 +425,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 0.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.easttiger.random-player";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Random Player";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -454,7 +454,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 0.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.easttiger.random-player";
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Random Player";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
