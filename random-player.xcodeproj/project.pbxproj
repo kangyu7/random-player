@@ -29,9 +29,22 @@
 		93CF4C0B2DDD5DED00EBC4DA /* random-playerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "random-playerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9375592E2DDDF0F2006E3886 /* Exceptions for "random-player" folder in "random-player" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 93CF4BF02DDD5DED00EBC4DA /* random-player */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		93CF4BF32DDD5DED00EBC4DA /* random-player */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9375592E2DDDF0F2006E3886 /* Exceptions for "random-player" folder in "random-player" target */,
+			);
 			path = "random-player";
 			sourceTree = "<group>";
 		};
@@ -401,6 +414,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "random-player/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Random Player";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -428,6 +443,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "random-player/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Random Player";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
