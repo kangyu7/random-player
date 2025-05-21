@@ -71,12 +71,43 @@
         }
       }
     },
+    "delete_failed" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "삭제 실패"
+          }
+        }
+      }
+    },
+    "delete_success" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "삭제 성공"
+          }
+        }
+      }
+    },
     "Execution" : {
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "실행"
+          }
+        }
+      }
+    },
+    "Failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실패"
           }
         }
       }
@@ -117,6 +148,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "선택된 앱: %@"
+          }
+        }
+      }
+    },
+    "Succeed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "성공"
           }
         }
       }

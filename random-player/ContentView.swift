@@ -97,6 +97,7 @@ struct ContentView: View {
                     lastExecutedFile = file
                 }
                 .keyboardShortcut("r", modifiers: [.command])
+                .disabled(indexedFiles.isEmpty)
                 Button("Delete") {
                     showDeleteConfirmation = true
                 }
@@ -109,9 +110,9 @@ struct ContentView: View {
                             try FileManager.default.removeItem(at: file)
                             indexedFiles.removeAll { $0 == file }
                             //lastExecutedFile = nil
-                            deleteStatus = ("파일 삭제 성공", true)
+                            deleteStatus = (String(localized: "delete_success"), true)
                         } catch {
-                            deleteStatus = ("파일 삭제 실패", false)
+                            deleteStatus = (String(localized: "delete_failed"), false)
                         }
                     }
                     Button("cancel", role: .cancel) {}
@@ -130,6 +131,7 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            
             if let lastFile = lastExecutedFile {
                 Text("Last Executed File: \(lastFile.path)")
                     .font(.caption2)
@@ -137,6 +139,7 @@ struct ContentView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
+            
             if let status = deleteStatus {
                 Text(status.message)
                     .font(.caption)
