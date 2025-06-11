@@ -92,6 +92,7 @@ struct ContentView: View {
                         }
                     }
                 }
+                .keyboardShortcut("i", modifiers: [.command])
                 .disabled(isIndexing || selectedDirectories.isEmpty)
                 
                 Button("Choose App") {
