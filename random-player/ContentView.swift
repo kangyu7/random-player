@@ -27,6 +27,16 @@ struct ContentView: View {
     @State private var showDeleteConfirmation = false
     @State private var isIndexing = false
     @State private var deleteStatus: (message: String, isSuccess: Bool)? = nil
+
+    private func updateDirectories(from items: [DirectoryBookmark]) {
+        selectedDirectories.removeAll()
+        for item in items {
+            if let url = item.resolveURL() {
+                url.startAccessingSecurityScopedResource()
+                selectedDirectories.append(url)
+            }
+        }
+    }
     
     @AppStorage("selectedAppPath") private var selectedAppPath: String = ""
 
@@ -187,6 +197,7 @@ struct ContentView: View {
                         url.startAccessingSecurityScopedResource()
                         modelContext.insert(DirectoryBookmark(url: url))
                     }
+                    try? modelContext.save()
                 }
             }
             .padding(.top, 10)
@@ -203,6 +214,7 @@ struct ContentView: View {
                                 if let item = directoryItems.first(where: { $0.path == url.path }) {
                                     modelContext.delete(item)
                                 }
+                                try? modelContext.save()
                             } label: {
                                 Label("delete", systemImage: "trash")
                             }
@@ -218,13 +230,10 @@ struct ContentView: View {
             if FileManager.default.fileExists(atPath: url.path) {
                 selectedApp = url
             }
-            selectedDirectories.removeAll()
-            for item in directoryItems {
-                if let url = item.resolveURL() {
-                    url.startAccessingSecurityScopedResource()
-                    selectedDirectories.append(url)
-                }
-            }
+            updateDirectories(from: directoryItems)
+        }
+        .onChange(of: directoryItems) { newValue in
+            updateDirectories(from: newValue)
         }
     }
 }
