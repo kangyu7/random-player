@@ -12,7 +12,8 @@ import SwiftData
 struct random_playerApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            ExtensionItem.self
+            ExtensionItem.self,
+            DirectoryBookmark.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

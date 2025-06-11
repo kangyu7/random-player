@@ -17,7 +17,8 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     
     @Query private var extensionItems: [ExtensionItem]
-    
+    @Query private var directoryItems: [DirectoryBookmark]
+
     @State private var customExtension = ""
     @State private var selectedDirectories: [URL] = []
     @State private var indexedFiles: [URL] = []
@@ -173,14 +174,19 @@ struct ContentView: View {
                 }
             }
             
-            Button("Add Path") {
-                let panel = NSOpenPanel()
-                panel.canChooseDirectories = true
-                panel.canChooseFiles = false
-                panel.allowsMultipleSelection = true
+           Button("Add Path") {
+               let panel = NSOpenPanel()
+               panel.canChooseDirectories = true
+               panel.canChooseFiles = false
+               panel.allowsMultipleSelection = true
 
                 if panel.runModal() == .OK {
-                    selectedDirectories.append(contentsOf: panel.urls)
+                    for url in panel.urls {
+                        guard !directoryItems.contains(where: { $0.path == url.path }) else { continue }
+                        selectedDirectories.append(url)
+                        url.startAccessingSecurityScopedResource()
+                        modelContext.insert(DirectoryBookmark(url: url))
+                    }
                 }
             }
             .padding(.top, 10)
@@ -192,6 +198,10 @@ struct ContentView: View {
                             Button(role: .destructive) {
                                 if let index = selectedDirectories.firstIndex(of: url) {
                                     selectedDirectories.remove(at: index)
+                                    url.stopAccessingSecurityScopedResource()
+                                }
+                                if let item = directoryItems.first(where: { $0.path == url.path }) {
+                                    modelContext.delete(item)
                                 }
                             } label: {
                                 Label("delete", systemImage: "trash")
@@ -208,11 +218,18 @@ struct ContentView: View {
             if FileManager.default.fileExists(atPath: url.path) {
                 selectedApp = url
             }
+            selectedDirectories.removeAll()
+            for item in directoryItems {
+                if let url = item.resolveURL() {
+                    url.startAccessingSecurityScopedResource()
+                    selectedDirectories.append(url)
+                }
+            }
         }
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: [ExtensionItem.self], inMemory: true)
+        .modelContainer(for: [ExtensionItem.self, DirectoryBookmark.self], inMemory: true)
 }
