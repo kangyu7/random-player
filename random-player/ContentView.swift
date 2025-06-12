@@ -168,7 +168,7 @@ struct ContentView: View {
             }
             
             List {
-                ForEach(extensionItems, id: \.self) { extItem in
+                ForEach(extensionItems, id: \.id) { extItem in
                     Text(extItem.name)
                         .contextMenu {
                             Button(role: .destructive) {
