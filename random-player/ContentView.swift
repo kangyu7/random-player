@@ -185,18 +185,30 @@ struct ContentView: View {
                 }
             }
             
-           Button("Add Path") {
-               let panel = NSOpenPanel()
-               panel.canChooseDirectories = true
-               panel.canChooseFiles = false
-               panel.allowsMultipleSelection = true
+            HStack {
+                Button("Add Path") {
+                    let panel = NSOpenPanel()
+                    panel.canChooseDirectories = true
+                    panel.canChooseFiles = false
+                    panel.allowsMultipleSelection = true
 
-                if panel.runModal() == .OK {
-                    for url in panel.urls {
-                        guard !directoryItems.contains(where: { $0.path == url.path }) else { continue }
-                        selectedDirectories.append(url)
-                        url.startAccessingSecurityScopedResource()
-                        modelContext.insert(DirectoryBookmark(url: url))
+                    if panel.runModal() == .OK {
+                        for url in panel.urls {
+                            guard !directoryItems.contains(where: { $0.path == url.path }) else { continue }
+                            selectedDirectories.append(url)
+                            url.startAccessingSecurityScopedResource()
+                            modelContext.insert(DirectoryBookmark(url: url))
+                        }
+                        try? modelContext.save()
+                    }
+                }
+                Button("Clear Path") {
+                    for url in selectedDirectories {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                    selectedDirectories.removeAll()
+                    for item in directoryItems {
+                        modelContext.delete(item)
                     }
                     try? modelContext.save()
                 }

@@ -51,6 +51,16 @@
         }
       }
     },
+    "Clear Path" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "경로 초기화"
+          }
+        }
+      }
+    },
     "delete" : {
       "localizations" : {
         "ko" : {
