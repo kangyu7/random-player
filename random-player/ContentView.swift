@@ -32,7 +32,7 @@ struct ContentView: View {
         selectedDirectories.removeAll()
         for item in items {
             if let url = item.resolveURL() {
-                url.startAccessingSecurityScopedResource()
+                _ = url.startAccessingSecurityScopedResource()
                 selectedDirectories.append(url)
             }
         }
@@ -196,7 +196,7 @@ struct ContentView: View {
                         for url in panel.urls {
                             guard !directoryItems.contains(where: { $0.path == url.path }) else { continue }
                             selectedDirectories.append(url)
-                            url.startAccessingSecurityScopedResource()
+                            _ = url.startAccessingSecurityScopedResource()
                             modelContext.insert(DirectoryBookmark(url: url))
                         }
                         try? modelContext.save()
@@ -245,7 +245,7 @@ struct ContentView: View {
             }
             updateDirectories(from: directoryItems)
         }
-        .onChange(of: directoryItems) { newValue in
+        .onChange(of: directoryItems) { oldValue, newValue in
             updateDirectories(from: newValue)
         }
     }
