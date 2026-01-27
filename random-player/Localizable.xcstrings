@@ -41,6 +41,9 @@
         }
       }
     },
+    "Cancel" : {
+
+    },
     "Choose App" : {
       "localizations" : {
         "ko" : {
@@ -50,6 +53,35 @@
           }
         }
       }
+    },
+    "Clean" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정리"
+          }
+        }
+      }
+    },
+    "clean_success %lld" : {
+
+    },
+    "clean_success 0" : {
+
+    },
+    "clean_success_failed %lld %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "clean_success_failed %1$lld %2$lld"
+          }
+        }
+      }
+    },
+    "Cleaning..." : {
+
     },
     "Clear Path" : {
       "localizations" : {
@@ -100,6 +132,9 @@
           }
         }
       }
+    },
+    "Deselect All" : {
+
     },
     "Execution" : {
       "localizations" : {
@@ -152,6 +187,21 @@
         }
       }
     },
+    "No items to delete." : {
+
+    },
+    "No recent items." : {
+
+    },
+    "Recently Executed" : {
+
+    },
+    "Select All" : {
+
+    },
+    "Select folders to delete" : {
+
+    },
     "Selected App: %@" : {
       "localizations" : {
         "ko" : {
@@ -182,6 +232,33 @@
           }
         }
       }
+    },
+    "모두 선택" : {
+
+    },
+    "모두 해제" : {
+
+    },
+    "삭제" : {
+
+    },
+    "삭제할 폴더를 선택하세요" : {
+
+    },
+    "삭제할 항목이 없습니다." : {
+
+    },
+    "정리" : {
+
+    },
+    "최근 실행 이력이 없습니다." : {
+
+    },
+    "최근 실행한 파일" : {
+
+    },
+    "취소" : {
+
     }
   },
   "version" : "1.0"
