@@ -10,6 +10,31 @@ import SwiftData
 import AppKit
 import UniformTypeIdentifiers
 
+enum SidebarItem: String, CaseIterable, Identifiable {
+    case player
+    case clean
+    case duplicates
+    
+    var id: String { rawValue }
+    
+    var label: String {
+        let isKo = Locale.current.language.languageCode?.identifier == "ko"
+        switch self {
+        case .player: return isKo ? "플레이어" : "Player"
+        case .clean: return isKo ? "정리" : "Clean"
+        case .duplicates: return isKo ? "중복" : "Duplicates"
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .player: return "play.circle"
+        case .clean: return "trash.circle"
+        case .duplicates: return "doc.on.doc"
+        }
+    }
+}
+
 struct ContentView: View {
     
     let defaultExtensions = ["mp4", "avi"]
@@ -30,11 +55,66 @@ struct ContentView: View {
     @State private var isCleaning = false
     @State private var deleteStatus: (message: String, isSuccess: Bool)? = nil
     @State private var pendingCleanTargets: [URL] = []
-    @State private var showCleanConfirmation = false
     
     @State private var selectedCleanTargets: Set<URL> = []
-    @State private var showCleanSheet = false
+    
+    @State private var duplicateGroups: [[URL]] = []
+    @State private var isFindingDuplicates = false
+    
+    @State private var selectedSidebarItem: SidebarItem? = .player
 
+    private func findDuplicateGroups(files: [URL]) -> [[URL]] {
+        // Extract filename without extension for each file
+        let fileNames = files.map { $0.deletingPathExtension().lastPathComponent }
+        
+        // Build adjacency: two files are "duplicates" if one name fully contains the other
+        let count = files.count
+        // Union-Find for grouping
+        var parent = Array(0..<count)
+        func find(_ x: Int) -> Int {
+            var x = x
+            while parent[x] != x {
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            }
+            return x
+        }
+        func union(_ a: Int, _ b: Int) {
+            let ra = find(a), rb = find(b)
+            if ra != rb { parent[ra] = rb }
+        }
+        
+        // Sort indices by name length (ascending) so shorter names come first
+        let sortedIndices = (0..<count).sorted { fileNames[$0].count < fileNames[$1].count }
+        
+        // For each pair, check containment (case-insensitive)
+        // Optimization: group by checking shorter names against longer ones
+        for i in 0..<sortedIndices.count {
+            let idxA = sortedIndices[i]
+            let nameA = fileNames[idxA].lowercased()
+            for j in (i + 1)..<sortedIndices.count {
+                let idxB = sortedIndices[j]
+                let nameB = fileNames[idxB].lowercased()
+                // nameA is shorter or equal; check if nameA is contained in nameB or equal
+                if nameA == nameB || nameB.contains(nameA) {
+                    union(idxA, idxB)
+                }
+            }
+        }
+        
+        // Collect groups
+        var groups: [Int: [URL]] = [:]
+        for i in 0..<count {
+            let root = find(i)
+            groups[root, default: []].append(files[i])
+        }
+        
+        // Only return groups with more than one file, sorted by group size descending
+        return groups.values
+            .filter { $0.count > 1 }
+            .sorted { $0.count > $1.count }
+    }
+    
     private func cleanEmptySubdirectories(targets: [URL]) -> (deleted: Int, failed: Int) {
         var deletedCount = 0
         var failedCount = 0
@@ -117,7 +197,10 @@ struct ContentView: View {
     
     @AppStorage("selectedAppPath") private var selectedAppPath: String = ""
 
-    var body: some View {
+    // MARK: - Player View
+    
+    @ViewBuilder
+    private var playerView: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading) {
                 HStack {
@@ -208,106 +291,6 @@ struct ContentView: View {
                             }
                         }
                         Button("cancel", role: .cancel) {}
-                    }
-                    Button {
-                        // Phase 1: compute targets and ask for confirmation
-                        isCleaning = true
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            let targets = computeCleanTargets(minBytes: 10 * 1024 * 1024)
-                            DispatchQueue.main.async {
-                                pendingCleanTargets = targets
-                                selectedCleanTargets = Set(targets)
-                                isCleaning = false
-                                if !targets.isEmpty {
-                                    // Use sheet with per-item selection instead of single alert
-                                    showCleanSheet = true
-                                } else {
-                                    deleteStatus = (String(localized: "clean_success 0"), true)
-                                }
-                            }
-                        }
-                    } label: {
-                        Text(Locale.current.language.languageCode?.identifier == "ko" ? "정리" : "Clean")
-                    }
-                    .keyboardShortcut("k", modifiers: [.command])
-                    .disabled(isCleaning || selectedDirectories.isEmpty)
-                    .sheet(isPresented: $showCleanSheet) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(Locale.current.language.languageCode?.identifier == "ko" ? "삭제할 폴더를 선택하세요" : "Select folders to delete")
-                                .font(.headline)
-                            if pendingCleanTargets.isEmpty {
-                                Text(Locale.current.language.languageCode?.identifier == "ko" ? "삭제할 항목이 없습니다." : "No items to delete.")
-                                    .foregroundColor(.secondary)
-                            } else {
-                                HStack(spacing: 12) {
-                                    Button(Locale.current.language.languageCode?.identifier == "ko" ? "모두 선택" : "Select All") {
-                                        selectedCleanTargets = Set(pendingCleanTargets)
-                                    }
-                                    Button(Locale.current.language.languageCode?.identifier == "ko" ? "모두 해제" : "Deselect All") {
-                                        selectedCleanTargets.removeAll()
-                                    }
-                                }
-                                List {
-                                    ForEach(pendingCleanTargets, id: \.self) { url in
-                                        HStack {
-                                            Toggle(isOn: Binding(
-                                                get: { selectedCleanTargets.contains(url) },
-                                                set: { isOn in
-                                                    if isOn { selectedCleanTargets.insert(url) } else { selectedCleanTargets.remove(url) }
-                                                }
-                                            )) {
-                                                Text(url.path)
-                                                    .font(.caption)
-                                                    .lineLimit(1)
-                                                    .truncationMode(.middle)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            HStack {
-                                Spacer()
-                                Button(role: .cancel) {
-                                    pendingCleanTargets.removeAll()
-                                    selectedCleanTargets.removeAll()
-                                    showCleanSheet = false
-                                } label: {
-                                    Text(Locale.current.language.languageCode?.identifier == "ko" ? "취소" : "Cancel")
-                                }
-                                Button(role: .destructive) {
-                                    // Perform deletion of selected items
-                                    isCleaning = true
-                                    let targets = Array(selectedCleanTargets)
-                                    pendingCleanTargets.removeAll()
-                                    selectedCleanTargets.removeAll()
-                                    showCleanSheet = false
-                                    DispatchQueue.global(qos: .userInitiated).async {
-                                        let (deleted, failed) = cleanEmptySubdirectories(targets: targets)
-                                        DispatchQueue.main.async {
-                                            // Remove deleted paths from recent history
-                                            if !targets.isEmpty {
-                                                let deletedDirs = targets
-                                                recentExecutedFiles.removeAll { fileURL in
-                                                    // Remove if the file is exactly one of the targets or is contained in a deleted directory
-                                                    if deletedDirs.contains(fileURL) { return true }
-                                                    return deletedDirs.contains { dir in fileURL.path.hasPrefix(dir.path + "/") }
-                                                }
-                                            }
-                                            if failed == 0 {
-                                                deleteStatus = (String(localized: "clean_success \(deleted)"), true)
-                                            } else {
-                                                deleteStatus = (String(localized: "clean_success_failed \(deleted) \(failed)"), failed == 0)
-                                            }
-                                            isCleaning = false
-                                        }
-                                    }
-                                } label: {
-                                    Text(Locale.current.language.languageCode?.identifier == "ko" ? "삭제" : "Delete")
-                                }
-                            }
-                        }
-                        .padding()
-                        .frame(minWidth: 600, minHeight: 400)
                     }
                 }
                 .padding(.bottom, 5)
@@ -451,6 +434,242 @@ struct ContentView: View {
             .frame(minWidth: 280, maxWidth: 360, maxHeight: .infinity, alignment: .top)
         }
         .padding()
+    }
+    
+    // MARK: - Clean View
+    
+    @ViewBuilder
+    private var cleanView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(Locale.current.language.languageCode?.identifier == "ko" ? "폴더 정리" : "Clean Folders")
+                    .font(.headline)
+                Spacer()
+                Button {
+                    isCleaning = true
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        let targets = computeCleanTargets(minBytes: 10 * 1024 * 1024)
+                        DispatchQueue.main.async {
+                            pendingCleanTargets = targets
+                            selectedCleanTargets = Set(targets)
+                            isCleaning = false
+                        }
+                    }
+                } label: {
+                    Text(Locale.current.language.languageCode?.identifier == "ko" ? "검색" : "Scan")
+                }
+                .keyboardShortcut("k", modifiers: [.command])
+                .disabled(isCleaning || selectedDirectories.isEmpty)
+            }
+            
+            if isCleaning {
+                HStack {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(Locale.current.language.languageCode?.identifier == "ko" ? "검색 중..." : "Scanning...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            if selectedDirectories.isEmpty {
+                Text(Locale.current.language.languageCode?.identifier == "ko" ? "먼저 플레이어 탭에서 경로를 추가하세요." : "Add paths in the Player tab first.")
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if pendingCleanTargets.isEmpty && !isCleaning {
+                Text(Locale.current.language.languageCode?.identifier == "ko" ? "검색 버튼을 눌러 정리할 폴더를 찾으세요." : "Press Scan to find folders to clean.")
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if !pendingCleanTargets.isEmpty {
+                HStack(spacing: 12) {
+                    Button(Locale.current.language.languageCode?.identifier == "ko" ? "모두 선택" : "Select All") {
+                        selectedCleanTargets = Set(pendingCleanTargets)
+                    }
+                    Button(Locale.current.language.languageCode?.identifier == "ko" ? "모두 해제" : "Deselect All") {
+                        selectedCleanTargets.removeAll()
+                    }
+                    Spacer()
+                    Text(Locale.current.language.languageCode?.identifier == "ko"
+                         ? "\(pendingCleanTargets.count)개 폴더 발견, \(selectedCleanTargets.count)개 선택됨"
+                         : "\(pendingCleanTargets.count) folders found, \(selectedCleanTargets.count) selected")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                List {
+                    ForEach(pendingCleanTargets, id: \.self) { url in
+                        HStack {
+                            Toggle(isOn: Binding(
+                                get: { selectedCleanTargets.contains(url) },
+                                set: { isOn in
+                                    if isOn { selectedCleanTargets.insert(url) } else { selectedCleanTargets.remove(url) }
+                                }
+                            )) {
+                                Text(url.path)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                        }
+                    }
+                }
+                HStack {
+                    Spacer()
+                    Button(role: .destructive) {
+                        isCleaning = true
+                        let targets = Array(selectedCleanTargets)
+                        pendingCleanTargets.removeAll()
+                        selectedCleanTargets.removeAll()
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            let (deleted, failed) = cleanEmptySubdirectories(targets: targets)
+                            DispatchQueue.main.async {
+                                if !targets.isEmpty {
+                                    let deletedDirs = targets
+                                    recentExecutedFiles.removeAll { fileURL in
+                                        if deletedDirs.contains(fileURL) { return true }
+                                        return deletedDirs.contains { dir in fileURL.path.hasPrefix(dir.path + "/") }
+                                    }
+                                }
+                                if failed == 0 {
+                                    deleteStatus = (String(localized: "clean_success \(deleted)"), true)
+                                } else {
+                                    deleteStatus = (String(localized: "clean_success_failed \(deleted) \(failed)"), failed == 0)
+                                }
+                                isCleaning = false
+                            }
+                        }
+                    } label: {
+                        Text(Locale.current.language.languageCode?.identifier == "ko" ? "삭제" : "Delete")
+                    }
+                    .disabled(selectedCleanTargets.isEmpty)
+                }
+            }
+            
+            if let status = deleteStatus {
+                Text(status.message)
+                    .font(.caption)
+                    .foregroundColor(status.isSuccess ? .green : .red)
+                    .transition(.opacity)
+            }
+        }
+        .padding()
+    }
+    
+    // MARK: - Duplicates View
+    
+    @ViewBuilder
+    private var duplicatesView: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(Locale.current.language.languageCode?.identifier == "ko" ? "중복 파일 검색" : "Find Duplicate Files")
+                    .font(.headline)
+                Spacer()
+                if !duplicateGroups.isEmpty {
+                    let totalFiles = duplicateGroups.reduce(0) { $0 + $1.count }
+                    Text(Locale.current.language.languageCode?.identifier == "ko"
+                         ? "\(duplicateGroups.count)개 그룹, \(totalFiles)개 파일"
+                         : "\(duplicateGroups.count) groups, \(totalFiles) files")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Button {
+                    isFindingDuplicates = true
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        let groups = findDuplicateGroups(files: indexedFiles)
+                        DispatchQueue.main.async {
+                            duplicateGroups = groups
+                            isFindingDuplicates = false
+                        }
+                    }
+                } label: {
+                    Text(Locale.current.language.languageCode?.identifier == "ko" ? "검색" : "Scan")
+                }
+                .disabled(isFindingDuplicates || indexedFiles.isEmpty)
+            }
+            
+            if isFindingDuplicates {
+                HStack {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(Locale.current.language.languageCode?.identifier == "ko" ? "검색 중..." : "Scanning...")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            if indexedFiles.isEmpty {
+                Text(Locale.current.language.languageCode?.identifier == "ko" ? "먼저 플레이어 탭에서 인덱싱을 실행하세요." : "Run Indexing in the Player tab first.")
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if duplicateGroups.isEmpty && !isFindingDuplicates {
+                Text(Locale.current.language.languageCode?.identifier == "ko" ? "검색 버튼을 눌러 중복 파일을 찾으세요." : "Press Scan to find duplicate files.")
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if !duplicateGroups.isEmpty {
+                List {
+                    ForEach(Array(duplicateGroups.enumerated()), id: \.offset) { groupIndex, group in
+                        Section {
+                            ForEach(group, id: \.self) { url in
+                                Text(url.path)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                    .onTapGesture(count: 2) {
+                                        execute(file: url)
+                                    }
+                                    .contextMenu {
+                                        Button {
+                                            NSWorkspace.shared.activateFileViewerSelecting([url])
+                                        } label: {
+                                            Label(Locale.current.language.languageCode?.identifier == "ko" ? "Finder에서 보기" : "Show in Finder", systemImage: "folder")
+                                        }
+                                        Divider()
+                                        Button(role: .destructive) {
+                                            do {
+                                                try FileManager.default.removeItem(at: url)
+                                                indexedFiles.removeAll { $0 == url }
+                                                // Remove from duplicate groups and clean up empty groups
+                                                duplicateGroups = duplicateGroups.compactMap { group in
+                                                    let filtered = group.filter { $0 != url }
+                                                    return filtered.count > 1 ? filtered : nil
+                                                }
+                                            } catch {
+                                                deleteStatus = (String(localized: "delete_failed"), false)
+                                            }
+                                        } label: {
+                                            Label(Locale.current.language.languageCode?.identifier == "ko" ? "파일 삭제" : "Delete File", systemImage: "trash")
+                                        }
+                                    }
+                            }
+                        } header: {
+                            let baseName = group.first.map { $0.deletingPathExtension().lastPathComponent } ?? ""
+                            Text(Locale.current.language.languageCode?.identifier == "ko"
+                                 ? "그룹 \(groupIndex + 1) - \(baseName) (\(group.count)개)"
+                                 : "Group \(groupIndex + 1) - \(baseName) (\(group.count) files)")
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+
+    var body: some View {
+        NavigationSplitView {
+            List(SidebarItem.allCases, selection: $selectedSidebarItem) { item in
+                Label(item.label, systemImage: item.icon)
+                    .tag(item)
+            }
+            .navigationSplitViewColumnWidth(min: 150, ideal: 180)
+        } detail: {
+            switch selectedSidebarItem {
+            case .player, .none:
+                playerView
+            case .clean:
+                cleanView
+            case .duplicates:
+                duplicatesView
+            }
+        }
         .onAppear {
             let path = selectedAppPath
             let url = URL(fileURLWithPath: path)
