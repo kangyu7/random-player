@@ -14,6 +14,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     case player
     case clean
     case duplicates
+    case settings
     
     var id: String { rawValue }
     
@@ -23,6 +24,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .player: return isKo ? "플레이어" : "Player"
         case .clean: return isKo ? "정리" : "Clean"
         case .duplicates: return isKo ? "중복" : "Duplicates"
+        case .settings: return isKo ? "설정" : "Settings"
         }
     }
     
@@ -31,6 +33,7 @@ enum SidebarItem: String, CaseIterable, Identifiable {
         case .player: return "play.circle"
         case .clean: return "trash.circle"
         case .duplicates: return "doc.on.doc"
+        case .settings: return "gearshape"
         }
     }
 }
@@ -190,12 +193,13 @@ struct ContentView: View {
         // Update recent list: put most recent at front, unique, cap at 10
         recentExecutedFiles.removeAll { $0 == file }
         recentExecutedFiles.insert(file, at: 0)
-        if recentExecutedFiles.count > 10 {
-            recentExecutedFiles.removeLast(recentExecutedFiles.count - 10)
+        if recentExecutedFiles.count > maxRecentCount {
+            recentExecutedFiles.removeLast(recentExecutedFiles.count - maxRecentCount)
         }
     }
     
     @AppStorage("selectedAppPath") private var selectedAppPath: String = ""
+    @AppStorage("maxRecentCount") private var maxRecentCount: Int = 10
 
     // MARK: - Player View
     
@@ -652,6 +656,32 @@ struct ContentView: View {
         }
         .padding()
     }
+    
+    // MARK: - Settings View
+    
+    @ViewBuilder
+    private var settingsView: some View {
+        let isKo = Locale.current.language.languageCode?.identifier == "ko"
+        Form {
+            Section(isKo ? "일반" : "General") {
+                Stepper(value: $maxRecentCount, in: 1...100) {
+                    HStack {
+                        Text(isKo ? "최근 이력 저장 개수" : "Recent history limit")
+                        Spacer()
+                        Text("\(maxRecentCount)")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .onChange(of: maxRecentCount) { _, newValue in
+                    if recentExecutedFiles.count > newValue {
+                        recentExecutedFiles.removeLast(recentExecutedFiles.count - newValue)
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -668,6 +698,8 @@ struct ContentView: View {
                 cleanView
             case .duplicates:
                 duplicatesView
+            case .settings:
+                settingsView
             }
         }
         .onAppear {
