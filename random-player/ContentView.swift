@@ -187,19 +187,27 @@ struct ContentView: View {
     }
     
     private func execute(file: URL) {
-        guard let app = selectedApp else { return }
-        NSWorkspace.shared.open([file], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
         lastExecutedFile = file
-        // Update recent list: put most recent at front, unique, cap at 10
         recentExecutedFiles.removeAll { $0 == file }
         recentExecutedFiles.insert(file, at: 0)
         if recentExecutedFiles.count > maxRecentCount {
             recentExecutedFiles.removeLast(recentExecutedFiles.count - maxRecentCount)
         }
+
+        if useInternalPlayer {
+            showingInternalPlayer = true
+        } else {
+            guard let app = selectedApp else { return }
+            NSWorkspace.shared.open([file], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
+        }
     }
     
     @AppStorage("selectedAppPath") private var selectedAppPath: String = ""
     @AppStorage("maxRecentCount") private var maxRecentCount: Int = 10
+    @AppStorage("useInternalPlayer") private var useInternalPlayer: Bool = false
+    @AppStorage("seekSeconds") private var seekSeconds: Int = 1
+
+    @State private var showingInternalPlayer = false
 
     // MARK: - Player View
     
@@ -260,14 +268,23 @@ struct ContentView: View {
                     .keyboardShortcut("i", modifiers: [.command])
                     .disabled(isIndexing || selectedDirectories.isEmpty)
                     
-                    Button("Choose App") {
-                        let panel = NSOpenPanel()
-                        panel.canChooseDirectories = false
-                        panel.canChooseFiles = true
-                        panel.allowedContentTypes = [UTType.application]
-                        if panel.runModal() == .OK, let url = panel.url {
-                            selectedApp = url
-                            selectedAppPath = url.path
+                    Picker("", selection: $useInternalPlayer) {
+                        Text(Locale.current.language.languageCode?.identifier == "ko" ? "내부 플레이어" : "Internal").tag(true)
+                        Text(Locale.current.language.languageCode?.identifier == "ko" ? "외부 앱" : "External App").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 220)
+
+                    if !useInternalPlayer {
+                        Button("Choose App") {
+                            let panel = NSOpenPanel()
+                            panel.canChooseDirectories = false
+                            panel.canChooseFiles = true
+                            panel.allowedContentTypes = [UTType.application]
+                            if panel.runModal() == .OK, let url = panel.url {
+                                selectedApp = url
+                                selectedAppPath = url.path
+                            }
                         }
                     }
                     Button("Execution") {
@@ -311,7 +328,7 @@ struct ContentView: View {
                         .foregroundColor(.blue)
                 }
                 
-                if let appURL = selectedApp {
+                if !useInternalPlayer, let appURL = selectedApp {
                     Text("Selected App: \(appURL.lastPathComponent)")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -430,7 +447,7 @@ struct ContentView: View {
                                 }
                             }
                             .buttonStyle(.plain)
-                            .disabled(selectedApp == nil)
+                            .disabled(!useInternalPlayer && selectedApp == nil)
                         }
                     }
                 }
@@ -678,6 +695,16 @@ struct ContentView: View {
                     }
                 }
             }
+            Section(isKo ? "플레이어" : "Player") {
+                Stepper(value: $seekSeconds, in: 1...60) {
+                    HStack {
+                        Text(isKo ? "키보드 탐색 간격" : "Keyboard seek interval")
+                        Spacer()
+                        Text(isKo ? "\(seekSeconds)초" : "\(seekSeconds)s")
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .padding()
@@ -691,15 +718,34 @@ struct ContentView: View {
             }
             .navigationSplitViewColumnWidth(min: 150, ideal: 180)
         } detail: {
-            switch selectedSidebarItem {
-            case .player, .none:
-                playerView
-            case .clean:
-                cleanView
-            case .duplicates:
-                duplicatesView
-            case .settings:
-                settingsView
+            // 내부 플레이어 재생 중일 때 detail 전체를 비디오 플레이어로 채움
+            if showingInternalPlayer, let file = lastExecutedFile {
+                InternalVLCPlayerView(
+                    fileURL: file,
+                    title: file.lastPathComponent,
+                    onNextRandom: {
+                        guard let f = indexedFiles.randomElement() else { return }
+                        execute(file: f)
+                    },
+                    onOpenExternal: selectedApp.map { app in
+                        {
+                            NSWorkspace.shared.open([file], withApplicationAt: app,
+                                                   configuration: .init(), completionHandler: nil)
+                        }
+                    },
+                    onClose: { showingInternalPlayer = false }
+                )
+            } else {
+                switch selectedSidebarItem {
+                case .player, .none:
+                    playerView
+                case .clean:
+                    cleanView
+                case .duplicates:
+                    duplicatesView
+                case .settings:
+                    settingsView
+                }
             }
         }
         .onAppear {
@@ -721,6 +767,25 @@ struct ContentView: View {
                 }
             }
         }
+    }
+}
+
+/// 비디오 트랙의 코덱·해상도·프레임레이트·비트레이트 정보
+struct VideoInfo {
+    let codec: String
+    let resolution: CGSize
+    let frameRate: Float
+    let bitrateMbps: Double
+
+    var summary: String {
+        var parts = [codec]
+        if resolution != .zero {
+            parts.append("\(Int(resolution.width))×\(Int(resolution.height))")
+        }
+        if bitrateMbps > 0 {
+            parts.append(String(format: "%.1f Mbps", bitrateMbps))
+        }
+        return parts.joined(separator: " · ")
     }
 }
 
