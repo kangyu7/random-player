@@ -202,11 +202,11 @@ struct InternalVLCPlayerView: View {
     }
 
     private func seekBy(_ seconds: Int) {
-        let ms = Int32(seconds * 1000)
-        if ms > 0 {
-            player.jumpForward(ms)
+        let s = Int32(seconds)
+        if s > 0 {
+            player.jumpForward(s)
         } else {
-            player.jumpBackward(-ms)
+            player.jumpBackward(-s)
         }
     }
 
